@@ -1,52 +1,13 @@
+// main.cpp
+
 #include <iostream>
 #include <vector>
 #include <string>
 #include <unistd.h>
 #include <sys/wait.h>
+#include "assmble.h"
 
 using namespace std;
-
-class Instruction {
-public:
-    char operation;
-    int intArg;
-    string stringArg;
-
-    Instruction(char op, int intArg, const string& stringArg)
-        : operation(op), intArg(intArg), stringArg(stringArg) {}
-};
-
-class Cpu {
-public:
-    vector<Instruction>* pProgram;
-    int programCounter;
-    int value;
-    int timeSlice;
-    int timeSliceUsed;
-
-    Cpu() : pProgram(nullptr), programCounter(0), value(0), timeSlice(0), timeSliceUsed(0) {}
-};
-
-enum State {
-    STATE_READY,
-    STATE_RUNNING,
-    STATE_BLOCKED
-};
-
-class PcbEntry {
-public:
-    int processId;
-    int parentProcessId;
-    vector<Instruction> program;
-    unsigned int programCounter;
-    int value;
-    unsigned int priority;
-    State state;
-    unsigned int startTime;
-    unsigned int timeUsed;
-
-    PcbEntry() : processId(0), parentProcessId(0), programCounter(0), value(0), priority(0), state(STATE_READY), startTime(0), timeUsed(0) {}
-};
 
 int runProcessManager(int pipeDescriptor); // Forward declaration
 
@@ -82,7 +43,7 @@ int main() {
 
         // Loop until a 'T' is written or until the pipe is broken.
         do {
-            cout << "Enter Q, P, U or T" << endl;
+            cout << "Enter RP(Running Process), BP(Blocked Process), PR2(Processes Ready to Execute)" << endl;
             cout << "$ ";
             cin >> ch;
 
