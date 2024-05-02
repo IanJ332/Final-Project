@@ -17,6 +17,8 @@ public:
     char operation;
     int intArg;
     string stringArg;
+
+    Instruction() : operation('\0'), intArg(0), stringArg("") {}
 };
 
 class Cpu {
@@ -45,11 +47,14 @@ public:
     State state;
     unsigned int startTime;
     unsigned int timeUsed;
+
+    PcbEntry() : processId(-1), parentProcessId(-1), programCounter(0), value(0), priority(0),
+                 state(STATE_READY), startTime(0), timeUsed(0) {}
 };
 
 string trim(string trimmed_str);
 
-PcbEntry pcbEntry[10];
+vector<PcbEntry> pcbEntry;
 unsigned int timestamp = 0;
 Cpu cpu;
 
@@ -233,7 +238,7 @@ void fork(int value) {
         return;
     }
 
-    int newProcessId = static_cast<int>(pcbEntry.size());
+    int newProcessId = pcbEntry.size();
     pcbEntry.resize(newProcessId + 1);
 
     pcbEntry[newProcessId].processId = newProcessId;
@@ -326,7 +331,7 @@ void print() {
     cout << "Cumulative Time Difference: " << cumulativeTimeDiff << endl;
     cout << "Number of Terminated Processes: " << numTerminatedProcesses << endl;
     // Print PCB table
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < pcbEntry.size(); i++) {
         if (pcbEntry[i].state != STATE_READY) {
             cout << "Process ID: " << pcbEntry[i].processId << endl;
             cout << "Parent Process ID: " << pcbEntry[i].parentProcessId << endl;
@@ -397,7 +402,6 @@ int main(int argc, char *argv[]) {
     pid_t processMgrPid;
     char ch;
     int result;
-
 
     // Create a pipe
     pipe(pipeDescriptors);
