@@ -1,10 +1,8 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
-#include <map>
-#include <queue>
-#include <iomanip>
-
+#include <fstream>
+#include <string>
 using namespace std;
 
 struct Process {
@@ -14,117 +12,112 @@ struct Process {
     int value;
     int startTime;
     int cpuTimeUsed;
-};
-
-struct ComparePriority {
-    bool operator()(const Process& p1, const Process& p2) {
-        return p1.priority > p2.priority;
-    }
+    int programCounter;
+    vector<string> program;
 };
 
 struct SystemState {
     int currentTime;
     Process runningProcess;
-    map<int, queue<Process>> readyProcesses;
-    queue<Process> blockedProcesses;
+    vector<Process> blockedProcesses;
+    vector<Process> readyProcesses;
 };
 
-void printSystemState(const SystemState& state) {
-    cout << "****************************************************************" << endl;
-    cout << "The current system state is as follows:" << endl;
-    cout << "****************************************************************" << endl;
-    cout << "CURRENT TIME: " << state.currentTime << endl;
+void executeInstruction(const string& instruction, SystemState& state) {
+    istringstream iss(instruction);
+    char command;
+    iss >> command;
 
-    cout << "RUNNING PROCESS:" << endl;
-    cout << "pid, ppid, priority, value, start time, CPU time used so far" << endl;
-    if (state.runningProcess.pid != -1) {
-        cout << state.runningProcess.pid << ", " << state.runningProcess.ppid << ", "
-             << state.runningProcess.priority << ", " << state.runningProcess.value << ", "
-             << state.runningProcess.startTime << ", " << state.runningProcess.cpuTimeUsed << endl;
-    }
-
-    cout << "BLOCKED PROCESSES:" << endl;
-    cout << "Queue of blocked processes:" << endl;
-    cout << "pid, ppid, priority, value, start time, CPU time used so far" << endl;
-    queue<Process> blockedCopy = state.blockedProcesses;
-    while (!blockedCopy.empty()) {
-        Process p = blockedCopy.front();
-        cout << p.pid << ", " << p.ppid << ", "
-             << p.priority << ", " << p.value << ", "
-             << p.startTime << ", " << p.cpuTimeUsed << endl;
-        blockedCopy.pop();
-    }
-
-    cout << "PROCESSES READY TO EXECUTE:" << endl;
-    for (const auto& pair : state.readyProcesses) {
-        cout << "Queue of processes with priority " << pair.first << ":" << endl;
-        cout << "pid, ppid, value, start time, CPU time used so far" << endl;
-        queue<Process> readyCopy = pair.second;
-        while (!readyCopy.empty()) {
-            Process p = readyCopy.front();
-            cout << p.pid << ", " << p.ppid << ", "
-                 << p.value << ", " << p.startTime << ", " << p.cpuTimeUsed << endl;
-            readyCopy.pop();
+    switch (command) {
+        case 'S': {
+            int n;
+            iss >> n;
+            state.runningProcess.value = n;
+            break;
+        }
+        case 'A': {
+            int n;
+            iss >> n;
+            state.runningProcess.value += n;
+            break;
+        }
+        case 'D': {
+            int n;
+            iss >> n;
+            state.runningProcess.value -= n;
+            break;
+        }
+        case 'B': {
+            state.blockedProcesses.push_back(state.runningProcess);
+            state.runningProcess = Process();
+            break;
+        }
+        case 'E': {
+            state.runningProcess = Process();
+            break;
+        }
+        case 'F': {
+            int n;
+            iss >> n;
+            Process newProcess = state.runningProcess;
+            newProcess.programCounter = n;
+            newProcess.startTime = state.currentTime;
+            newProcess.pid = state.readyProcesses.size() + state.blockedProcesses.size() + 1;
+            newProcess.ppid = state.runningProcess.pid;
+            state.readyProcesses.push_back(newProcess);
+            break;
+        }
+        case 'R': {
+            string filename;
+            iss >> filename;
+            ifstream file(filename);
+            string line;
+            Process newProcess = state.runningProcess;
+            newProcess.program.clear();
+            newProcess.programCounter = 0;
+            while (getline(file, line)) {
+                newProcess.program.push_back(line);
+            }
+            newProcess.startTime = state.currentTime;
+            newProcess.pid = state.readyProcesses.size() + state.blockedProcesses.size() + 1;
+            newProcess.ppid = state.runningProcess.pid;
+            state.readyProcesses.push_back(newProcess);
+            break;
         }
     }
-    cout << "****************************************************************" << endl;
 }
 
 int main() {
     SystemState state;
     state.currentTime = 0;
-    state.runningProcess = {-1, -1, -1, -1, -1, -1}; // No process running
-    priority_queue<Process, vector<Process>, ComparePriority> processQueue;
 
-    while (true) {
-        cout << "Enter a command (S <time>, A <pid>, D <pid>, F <pid>, R <filename>, E to exit): ";
-        string input;
-        getline(cin, input);
-        istringstream iss(input);
-        char command;
-        iss >> command;
-        if (command == 'E') {
+    string input;
+    cout << "Enter a command (S <value>, A <value>, D <value>, B, E, F <value>, R <filename>, Q to quit): ";
+    while (getline(cin, input)) {
+        if (input == "Q") {
             break;
         }
-
-        switch (command) {
-            case 'S': {
-                int time;
-                iss >> time;
-                state.currentTime = time;
-                break;
-            }
-            case 'A': {
-                Process p;
-                iss >> p.pid;
-                processQueue.push(p);
-                break;
-            }
-            case 'D': {
-                int pid;
-                iss >> pid;
-                // Implement deletion logic
-                break;
-            }
-            case 'F': {
-                int pid;
-                iss >> pid;
-                // Implement fork logic
-                break;
-            }
-            case 'R': {
-                string filename;
-                iss >> filename;
-                // Implement read file logic
-                break;
-            }
-            default:
-                cout << "Invalid command." << endl;
+        executeInstruction(input, state);
+        cout << "****************************************************************" << endl;
+        cout << "The current system state is as follows:" << endl;
+        cout << "****************************************************************" << endl;
+        cout << "CURRENT TIME: " << state.currentTime << endl;
+        cout << "RUNNING PROCESS:" << endl;
+        cout << "pid, ppid, priority, value, start time, CPU time used so far, program counter" << endl;
+        cout << state.runningProcess.pid << ", " << state.runningProcess.ppid << ", " << state.runningProcess.priority << ", "
+             << state.runningProcess.value << ", " << state.runningProcess.startTime << ", " << state.runningProcess.cpuTimeUsed << ", "
+             << state.runningProcess.programCounter << endl;
+        cout << "BLOCKED PROCESSES:" << endl;
+        cout << "Queue of blocked processes:" << endl;
+        cout << "pid, ppid, priority, value, start time, CPU time used so far, program counter" << endl;
+        for (const auto& process : state.blockedProcesses) {
+            cout << process.pid << ", " << process.ppid << ", " << process.priority << ", "
+                 << process.value << ", " << process.startTime << ", " << process.cpuTimeUsed << ", "
+                 << process.programCounter << endl;
         }
-
-        // Update system state and print
-        state.runningProcess = processQueue.empty() ? Process{-1, -1, -1, -1, -1, -1} : processQueue.top();
-        printSystemState(state);
+        cout << "PROCESSES READY TO EXECUTE:" << endl;
+        cout << "****************************************************************" << endl;
+        cout << "Enter a command (S <value>, A <value>, D <value>, B, E, F <value>, R <filename>, Q to quit): ";
     }
 
     return 0;
