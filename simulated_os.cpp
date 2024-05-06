@@ -85,6 +85,7 @@ void executeInstruction(const string& instruction, SystemState& state) {
             break;
         }
     }
+    state.currentTime++;
 }
 
 int main() {
