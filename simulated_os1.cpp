@@ -13,7 +13,6 @@ using namespace std;
 
 #include <algorithm>
 #include <cctype>
-
 #include <locale>
 
 // trim from start (in place)
@@ -97,7 +96,12 @@ bool createProgram(const string &filename, vector<Instruction> &program) {
         if (line.size() > 0) {
             Instruction instruction;
             instruction.operation = toupper(line[0]);
-            instruction.stringArg = trim(line.erase(0, 1));
+
+            // Fix: Erase the first character, then assign the modified line to stringArg, and finally trim it.
+            line.erase(0, 1);  // Erase the first character
+            instruction.stringArg = line;  // Assign the modified line to stringArg
+            trim(instruction.stringArg);  // Trim the stringArg
+
             stringstream argStream(instruction.stringArg);
             switch (instruction.operation) {
                 case 'S':
