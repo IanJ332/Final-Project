@@ -90,11 +90,19 @@ bool executeInstruction(const string& instruction, SystemState& state) {
         }
         default: {
             // Handle invalid command
+            // New comments fixed
             cout << "Invalid command. Please enter a valid command." << endl;
+            cout << "Hints: S + n: Set the value of the integer variable to n, where n is an integer." << endl;
+            cout << "A n: Add n to the value of the integer variable, where n is an integer." << endl;
+            cout << "D n: Subtract n from the value of the integer variable, where n is an integer." << endl;
+            cout << "B: Block this simulated process." << endl;
+            cout << "E: Terminate this simulated process." << endl;
+            cout << "F n: Create a new simulated process." << endl;
+            cout << "R filename: Replace the program of the simulated process with the program in the file filename, and set program counter to the first instruction of this new program." << endl;  
             return false;
         }
     }
-    state.currentTime++;
+    state.currentTime++;    
     return true;
 }
 
