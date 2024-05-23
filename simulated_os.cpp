@@ -3,7 +3,10 @@
 #include <vector>
 #include <fstream>
 #include <string>
+#include <chrono>
+
 using namespace std;
+using namespace std::chrono;
 
 struct Process {
     int pid;
@@ -17,13 +20,17 @@ struct Process {
 };
 
 struct SystemState {
-    int currentTime;
+    double currentTime;
+    double totalTime;
     Process runningProcess;
     vector<Process> blockedProcesses;
     vector<Process> readyProcesses;
+    int nextPid;
 };
 
-void executeInstruction(const string& instruction, SystemState& state) {
+bool executeInstruction(const string& instruction, SystemState& state) {
+    auto start = high_resolution_clock::now();
+    
     istringstream iss(instruction);
     char command;
     iss >> command;
@@ -62,7 +69,7 @@ void executeInstruction(const string& instruction, SystemState& state) {
             Process newProcess = state.runningProcess;
             newProcess.programCounter = n;
             newProcess.startTime = state.currentTime;
-            newProcess.pid = state.readyProcesses.size() + state.blockedProcesses.size() + 1;
+            newProcess.pid = state.nextPid++;
             newProcess.ppid = state.runningProcess.pid;
             state.readyProcesses.push_back(newProcess);
             break;
@@ -71,54 +78,95 @@ void executeInstruction(const string& instruction, SystemState& state) {
             string filename;
             iss >> filename;
             ifstream file(filename);
-            string line;
-            Process newProcess = state.runningProcess;
-            newProcess.program.clear();
-            newProcess.programCounter = 0;
-            while (getline(file, line)) {
-                newProcess.program.push_back(line);
+            if (file.is_open()) {
+                string line;
+                Process newProcess;
+                newProcess.program.clear();
+                newProcess.programCounter = 0;
+                while (getline(file, line)) {
+                    newProcess.program.push_back(line);
+                }
+                newProcess.startTime = state.currentTime;
+                newProcess.pid = state.nextPid++;
+                newProcess.ppid = state.runningProcess.pid;
+                state.readyProcesses.push_back(newProcess);
+            } else {
+                cout << "Failed to open file: " << filename << endl;
             }
-            newProcess.startTime = state.currentTime;
-            newProcess.pid = state.readyProcesses.size() + state.blockedProcesses.size() + 1;
-            newProcess.ppid = state.runningProcess.pid;
-            state.readyProcesses.push_back(newProcess);
             break;
         }
+        default: {
+            cout << "Invalid command. Please enter a valid command." << endl;
+            cout << "Hints: S + n: Set the value of the integer variable to n, where n is an integer." << endl;
+            cout << "A n: Add n to the value of the integer variable, where n is an integer." << endl;
+            cout << "D n: Subtract n from the value of the integer variable, where n is an integer." << endl;
+            cout << "B: Block this simulated process." << endl;
+            cout << "E: Terminate this simulated process." << endl;
+            cout << "F n: Create a new simulated process." << endl;
+            cout << "R filename: Replace the program of the simulated process with the program in the file filename, and set program counter to the first instruction of this new program." << endl;
+            return false;
+        }
     }
-    state.currentTime++;
+
+    auto end = high_resolution_clock::now();
+    duration<double> elapsed = end - start;
+    state.currentTime = elapsed.count();
+    state.totalTime += state.currentTime;
+    
+    return true;
+}
+
+void printSystemState(const SystemState& state) {
+    cout << "****************************************************************" << endl;
+    cout << "The current system state is as follows:" << endl;
+    cout << "****************************************************************" << endl;
+    cout << "CURRENT TIME: " << state.currentTime << "s" << endl;
+    cout << "Total TIME: " << state.totalTime << "s" << endl;
+    cout << "RUNNING PROCESS:" << endl;
+    cout << "pid, ppid, priority, value, start time, CPU time used so far, program counter" << endl;
+    cout << state.runningProcess.pid << ", " << state.runningProcess.ppid << ", " << state.runningProcess.priority << ", "
+         << state.runningProcess.value << ", " << state.runningProcess.startTime << ", " << state.runningProcess.cpuTimeUsed << ", "
+         << state.runningProcess.programCounter << endl;
+    cout << "BLOCKED PROCESSES:" << endl;
+    cout << "Queue of blocked processes:" << endl;
+    cout << "pid, ppid, priority, value, start time, CPU time used so far, program counter" << endl;
+    for (const auto& process : state.blockedProcesses) {
+        cout << process.pid << ", " << process.ppid << ", " << process.priority << ", "
+             << process.value << ", " << process.startTime << ", " << process.cpuTimeUsed << ", "
+             << process.programCounter << endl;
+    }
+    cout << "PROCESSES READY TO EXECUTE:" << endl;
+    for (const auto& process : state.readyProcesses) {
+        cout << process.pid << ", " << process.ppid << ", " << process.priority << ", "
+             << process.value << ", " << process.startTime << ", " << process.cpuTimeUsed << ", "
+             << process.programCounter << endl;
+    }
+    cout << "****************************************************************" << endl;
 }
 
 int main() {
     SystemState state;
     state.currentTime = 0;
+    state.totalTime = 0;
+    state.nextPid = 1;  // Start PIDs from 1
+
+    // Initialize the first process as running process
+    state.runningProcess.pid = state.nextPid++;
+    state.runningProcess.ppid = 0;  // No parent for the initial process
 
     string input;
-    cout << "Enter a command (S <value>, A <value>, D <value>, B, E, F <value>, R <filename>, Q to quit): ";
-    while (getline(cin, input)) {
-        if (input == "Q") {
+    while (true) {
+        cout << "Enter a command (S <value>, A <value>, D <value>, B, E, F <value>, R <filename>, Q to quit): ";
+        if (getline(cin, input)) {
+            if (input == "Q") {
+                break;
+            }
+            if (executeInstruction(input, state)) {
+                printSystemState(state);
+            }
+        } else {
             break;
         }
-        executeInstruction(input, state);
-        cout << "****************************************************************" << endl;
-        cout << "The current system state is as follows:" << endl;
-        cout << "****************************************************************" << endl;
-        cout << "CURRENT TIME: " << state.currentTime << endl;
-        cout << "RUNNING PROCESS:" << endl;
-        cout << "pid, ppid, priority, value, start time, CPU time used so far, program counter" << endl;
-        cout << state.runningProcess.pid << ", " << state.runningProcess.ppid << ", " << state.runningProcess.priority << ", "
-             << state.runningProcess.value << ", " << state.runningProcess.startTime << ", " << state.runningProcess.cpuTimeUsed << ", "
-             << state.runningProcess.programCounter << endl;
-        cout << "BLOCKED PROCESSES:" << endl;
-        cout << "Queue of blocked processes:" << endl;
-        cout << "pid, ppid, priority, value, start time, CPU time used so far, program counter" << endl;
-        for (const auto& process : state.blockedProcesses) {
-            cout << process.pid << ", " << process.ppid << ", " << process.priority << ", "
-                 << process.value << ", " << process.startTime << ", " << process.cpuTimeUsed << ", "
-                 << process.programCounter << endl;
-        }
-        cout << "PROCESSES READY TO EXECUTE:" << endl;
-        cout << "****************************************************************" << endl;
-        cout << "Enter a command (S <value>, A <value>, D <value>, B, E, F <value>, R <filename>, Q to quit): ";
     }
 
     return 0;
