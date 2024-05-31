@@ -3,10 +3,7 @@
 #include <vector>
 #include <fstream>
 #include <string>
-#include <chrono>
-
 using namespace std;
-using namespace std::chrono;
 
 struct Process {
     int pid;
@@ -20,17 +17,13 @@ struct Process {
 };
 
 struct SystemState {
-    double currentTime;
-    double totalTime;
+    int currentTime;
     Process runningProcess;
     vector<Process> blockedProcesses;
     vector<Process> readyProcesses;
-    int nextPid;
 };
 
 bool executeInstruction(const string& instruction, SystemState& state) {
-    auto start = high_resolution_clock::now();
-    
     istringstream iss(instruction);
     char command;
     iss >> command;
@@ -69,7 +62,7 @@ bool executeInstruction(const string& instruction, SystemState& state) {
             Process newProcess = state.runningProcess;
             newProcess.programCounter = n;
             newProcess.startTime = state.currentTime;
-            newProcess.pid = state.nextPid++;
+            newProcess.pid = state.readyProcesses.size() + state.blockedProcesses.size() + 1;
             newProcess.ppid = state.runningProcess.pid;
             state.readyProcesses.push_back(newProcess);
             break;
@@ -80,14 +73,14 @@ bool executeInstruction(const string& instruction, SystemState& state) {
             ifstream file(filename);
             if (file.is_open()) {
                 string line;
-                Process newProcess;
+                Process newProcess = state.runningProcess;
                 newProcess.program.clear();
                 newProcess.programCounter = 0;
                 while (getline(file, line)) {
                     newProcess.program.push_back(line);
                 }
                 newProcess.startTime = state.currentTime;
-                newProcess.pid = state.nextPid++;
+                newProcess.pid = state.readyProcesses.size() + state.blockedProcesses.size() + 1;
                 newProcess.ppid = state.runningProcess.pid;
                 state.readyProcesses.push_back(newProcess);
             } else {
@@ -96,6 +89,8 @@ bool executeInstruction(const string& instruction, SystemState& state) {
             break;
         }
         default: {
+            // Handle invalid command
+            // New comments fixed
             cout << "Invalid command. Please enter a valid command." << endl;
             cout << "Hints: S + n: Set the value of the integer variable to n, where n is an integer." << endl;
             cout << "A n: Add n to the value of the integer variable, where n is an integer." << endl;
@@ -103,16 +98,11 @@ bool executeInstruction(const string& instruction, SystemState& state) {
             cout << "B: Block this simulated process." << endl;
             cout << "E: Terminate this simulated process." << endl;
             cout << "F n: Create a new simulated process." << endl;
-            cout << "R filename: Replace the program of the simulated process with the program in the file filename, and set program counter to the first instruction of this new program." << endl;
+            cout << "R filename: Replace the program of the simulated process with the program in the file filename, and set program counter to the first instruction of this new program." << endl;  
             return false;
         }
     }
-
-    auto end = high_resolution_clock::now();
-    duration<double> elapsed = end - start;
-    state.currentTime = elapsed.count();
-    state.totalTime += state.currentTime;
-    
+    state.currentTime++;    
     return true;
 }
 
@@ -120,26 +110,25 @@ void printSystemState(const SystemState& state) {
     cout << "****************************************************************" << endl;
     cout << "The current system state is as follows:" << endl;
     cout << "****************************************************************" << endl;
-    cout << "CURRENT TIME: " << state.currentTime << "s" << endl;
-    cout << "Total TIME: " << state.totalTime << "s" << endl;
+    cout << "CURRENT TIME: " << state.currentTime << endl;
     cout << "RUNNING PROCESS:" << endl;
     cout << "pid, ppid, priority, value, start time, CPU time used so far, program counter" << endl;
     cout << state.runningProcess.pid << ", " << state.runningProcess.ppid << ", " << state.runningProcess.priority << ", "
-         << state.runningProcess.value << ", " << state.runningProcess.startTime << ", " << state.runningProcess.cpuTimeUsed << ", "
-         << state.runningProcess.programCounter << endl;
+        << state.runningProcess.value << ", " << state.runningProcess.startTime << ", " << state.runningProcess.cpuTimeUsed << ", "
+        << state.runningProcess.programCounter << endl;
     cout << "BLOCKED PROCESSES:" << endl;
     cout << "Queue of blocked processes:" << endl;
     cout << "pid, ppid, priority, value, start time, CPU time used so far, program counter" << endl;
     for (const auto& process : state.blockedProcesses) {
         cout << process.pid << ", " << process.ppid << ", " << process.priority << ", "
-             << process.value << ", " << process.startTime << ", " << process.cpuTimeUsed << ", "
-             << process.programCounter << endl;
+            << process.value << ", " << process.startTime << ", " << process.cpuTimeUsed << ", "
+            << process.programCounter << endl;
     }
     cout << "PROCESSES READY TO EXECUTE:" << endl;
     for (const auto& process : state.readyProcesses) {
         cout << process.pid << ", " << process.ppid << ", " << process.priority << ", "
-             << process.value << ", " << process.startTime << ", " << process.cpuTimeUsed << ", "
-             << process.programCounter << endl;
+            << process.value << ", " << process.startTime << ", " << process.cpuTimeUsed << ", "
+            << process.programCounter << endl;
     }
     cout << "****************************************************************" << endl;
 }
@@ -147,12 +136,6 @@ void printSystemState(const SystemState& state) {
 int main() {
     SystemState state;
     state.currentTime = 0;
-    state.totalTime = 0;
-    state.nextPid = 1;  // Start PIDs from 1
-
-    // Initialize the first process as running process
-    state.runningProcess.pid = state.nextPid++;
-    state.runningProcess.ppid = 0;  // No parent for the initial process
 
     string input;
     while (true) {
