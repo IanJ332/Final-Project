@@ -1,15 +1,16 @@
-SJSU CS-149 Project Description:
+CS-149 Operating System Project Description:
 
-## Enviroment：
-- **GLIBC Problem:**When attempting to run `simulated_os`, compiled using GLIBC 2.31, on Ubuntu version 20.04.6, compatibility issues may arise. This is because Ubuntu 20.04.6 comes pre-installed with GLIBC 2.31, and the GLIBC version from 2.34 contains new features and changes that may cause the program to not run correctly with the older version of GLIBC.
+## Environment：
+- **GLIBC Problem:** When attempting to run `simulated_os`, compiled using GLIBC 2.31, on Ubuntu version 20.04.6, compatibility issues may arise. This is because Ubuntu 20.04.6 comes pre-installed with GLIBC 2.31, and the GLIBC version from 2.34 contains new features and changes that may cause the program to not run correctly with the older version of GLIBC.
 
-If you encounter issues while running, consider recompiling `simulated_os.cpp` to use the GLIBC version installed on your system. This ensures that the compiled program is compatible with your system environment and avoids compatibility problems.
+  If you encounter issues while running, consider recompiling `simulated_os.cpp` to use the GLIBC version installed on your system. This ensures that the compiled program is compatible with your system environment and avoids compatibility problems.
 
-- **GCC & Clang:**There is usually no significant difference in performance between GCC and Clang for the above code.
+- **GCC & Clang:** There is usually no significant difference in performance between **GCC** and **Clang** for the above code.
 
 ## old_files Directory
 
 The `old_files` directory contains a collection of previous files, including various examples and small C programming assignments. Below is an overview of the contents:
+
 
 ## Contents
 
